@@ -45,7 +45,7 @@ def handle_message(message):
                 else:
                     bot.send_message(message.chat.id, "Неверный формат ответа от ИИ.")
             else:
-                bot.send_message(message.chat.id, "Не удалось получить ответ от ИИ.")
+                bot.send_message(message.chat.id, response)
         except Exception as e:
             bot.send_message(message.chat.id, f"Произошла ошибка: {str(e)}")
             print(f"Ошибка: {str(e)}")
