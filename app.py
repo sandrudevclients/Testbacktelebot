@@ -19,34 +19,36 @@ def handle_message(message):
         history[user_id] = []
     
     # Добавляем текущее сообщение в историю
-    history[user_id].append({"role": "user", "content": message.text})
+    user_message = message.text.strip()
+    if user_message:
+        history[user_id].append({"role": "user", "content": user_message})
     
-    try:
-        # Получаем ответ от модели, включая историю переписки
-        response = g4f.ChatCompletion.create(
-            model="gpt-4",
-            messages=history[user_id]  # Используем историю для запроса
-        )
-        
-        # Логируем полный ответ для отладки
-        print("Полный ответ от g4f API:", response)
+        try:
+            # Получаем ответ от модели, включая историю переписки
+            response = g4f.ChatCompletion.create(
+                model="gpt-4",
+                messages=history[user_id]  # Используем историю для запроса
+            )
+            
+            # Логируем полный ответ для отладки
+            print("Полный ответ от g4f API:", response)
 
-        # Проверяем тип ответа и структуру
-        if isinstance(response, dict) and 'choices' in response:
-            if len(response['choices']) > 0 and 'message' in response['choices'][0]:
-                reply_text = response['choices'][0]['message']['content']
-                
-                # Добавляем ответ ИИ в историю
-                history[user_id].append({"role": "assistant", "content": reply_text})
-                
-                bot.send_message(message.chat.id, reply_text)
+            # Проверяем тип ответа и структуру
+            if isinstance(response, dict) and 'choices' in response:
+                if len(response['choices']) > 0 and 'message' in response['choices'][0]:
+                    reply_text = response['choices'][0]['message']['content']
+                    
+                    # Добавляем ответ ИИ в историю
+                    history[user_id].append({"role": "assistant", "content": reply_text})
+                    
+                    bot.send_message(message.chat.id, reply_text)
+                else:
+                    bot.send_message(message.chat.id, "Неверный формат ответа от ИИ.")
             else:
-                bot.send_message(message.chat.id, "Неверный формат ответа от ИИ.")
-        else:
-            bot.send_message(message.chat.id, response)
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Произошла ошибка: {str(e)}")
-        print(f"Ошибка: {str(e)}")
+                bot.send_message(message.chat.id, "Не удалось получить ответ от ИИ.")
+        except Exception as e:
+            bot.send_message(message.chat.id, f"Произошла ошибка: {str(e)}")
+            print(f"Ошибка: {str(e)}")
 
 def run_bot():
     """Запускает бота в отдельном потоке."""
