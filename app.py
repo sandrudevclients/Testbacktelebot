@@ -17,47 +17,33 @@ def start_bot():
         
         # Инициализируем историю для нового пользователя
         if user_id not in history:
-            history[user_id] = []
+            history[user_id] = {"messages": [], "seen": set()}
         
-        # Добавляем текущее сообщение в историю
-        history[user_id].append({"role": "user", "content": message.text})
-        
-        try:
-            # Получаем ответ от модели, включая историю переписки
-            response = g4f.ChatCompletion.create(
-                model="gpt-4",
-                messages=history[user_id]  # Используем историю для запроса
-            )
-            
-            # Логируем полный ответ для отладки
-            print("Полный ответ от g4f API:", response)
+        # Проверяем, было ли сообщение уже отправлено
+        if message.text not in history[user_id]["seen"]:
+            # Добавляем текущее сообщение в историю и отмечаем его как увиденное
+            history[user_id]["messages"].append({"role": "user", "content": message.text})
+            history[user_id]["seen"].add(message.text)
 
-            # Проверяем тип ответа и структуру
-            if isinstance(response, dict) and 'choices' in response:
-                if len(response['choices']) > 0 and 'message' in response['choices'][0]:
-                    reply_text = response['choices'][0]['message']['content']
-                    
-                    # Добавляем ответ ИИ в историю
-                    history[user_id].append({"role": "assistant", "content": reply_text})
-                    
-                    bot.send_message(message.chat.id, reply_text)
-                else:
-                    bot.send_message(message.chat.id, "Неверный формат ответа от ИИ.")
-            else:
-                bot.send_message(message.chat.id, response)
-        except Exception as e:
-            bot.send_message(message.chat.id, f"Произошла ошибка: {str(e)}")
-            print(f"Ошибка: {str(e)}")
+            try:
+                # Получаем ответ от модели, включая историю переписки
+                response = g4f.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=history[user_id]["messages"]  # Используем историю для запроса
+                )
 
-    # Запускаем бота
-    bot.polling(none_stop=True)
+                # Логируем полный ответ для отладки
+                print("Полный ответ от g4f API:", response)
 
-# Запускаем поток для бота
+                # Проверяем тип ответа и структуру
+                if isinstance(response, dict) and 'choices' in response:
+                    bot.reply_to(message, response['choices'][0]['message']['content'])
+
+            except Exception as e:
+                print("Ошибка при получении ответа:", e)
+                bot.reply_to(message, "Извините, произошла ошибка. Попробуйте снова.")
+
+    bot.polling()
+
+# Запускаем бота в отдельном потоке
 threading.Thread(target=start_bot).start()
-
-# Интерфейс Streamlit
-st.title("Telegram Bot with Streamlit")
-st.write("Бот работает в фоновом режиме. Проверьте Telegram для взаимодействия.")
-
-if st.button("Остановить бота"):
-    st.write("Функция остановки бота не реализована в этом примере. Вы можете завершить поток вручную.")
